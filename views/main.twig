@@ -8,45 +8,116 @@ dhdhgh
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css"
     integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
 </head>
-
-<div>
-    {{title}}
+{% if message %}
+<div class="alert alert-info">
+    {{message}}
 </div>
-{# <pre>
-    {{ dump(user) }}
-</pre> #}
-
-{# <div class="row d-flex">
-{% for object in web_objects %}
-<div class="col mb-4 d-flex align-items-stretch">
-    <div class="border p-2 d-flex flex-column justify-content-between position-relative">
-        <div class="position-absolute" style="right: 4px; top: 4px;">
-            <form action="/web-object/{{object.id}}/delete" method="post">
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-times"></i>
-                </button>
-            </form>
-        </div>
-        <div class="position-absolute" style="right: 43px; top: 4px;">
-            <form action="/web-object/{{object.id}}/edit" method="get">
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-pen-alt"></i>
-                </button>
-            </form>
-        </div>
-        <div class="img-thumbnail mb-2" style="width: 100%; height: 220px; overflow:hidden">
-            <img style="width: 100%; height: 100%; object-fit:cover;" src="{{object.image}}" alt="">
-        </div>
-        <div class="d-flex flex-column">
-            <a class="btn btn-primary mb-1"  href="/web_object/{{object.id}}">{{ object.title }}</a>
-            <div class="d-flex justify-content-center">
-                <a class="me-3" href="/web_object/{{object.id}}?show=image">Картинка</a>
-                <a href="/web_object/{{object.id}}?show=info">Описание</a>
-            </div>
-        </div>
+{% endif %}
+{% if user == "student" %}
+<style type="text/css">
+    /* input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+    appearance: none;
+} */
+/* :-moz-submit-invalid {
+    border: 1px solid red;
+} */
+</style>
+    {# [hint] {
+        position: relative; /* Относительное позиционирование */ 
+       }
+       [hint]::after {
+        content: attr(hint); /* Выводим текст */
+        position: absolute; /* Абсолютное позиционирование */
+        width: 300px; /* Ширина подсказки */
+        left: 0; top: 0; /* Положение подсказки */
+        background: #3989c9; /* Синий цвет фона */
+        color: #fff; /* Цвет текста */
+        padding: 0.5em; /* Поля вокруг текста */
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Параметры тени */
+        pointer-events: none; /* Подсказка */
+        opacity: 0; /* Подсказка невидима */
+        transition: 1s; /* Время появления подсказки */
+       } 
+       [hint]:hover::after {
+        opacity: 1; /* Показываем подсказку */
+        top: 2em; /* Положение подсказки */
+       } #}
+{# hint="в рублях, может быть дробным числом, разделитель точка" #}
+{# oninvalid="this.setCustomValidity('Целое или дробное число, разделитель точка')" #}
+<form action="" enctype="multipart/form-data" method="POST" class="row g-3">
+    <div class="col-4 number">
+        <label class="form-label">Среднедушевой доход семьи (в рублях)</label>
+        <input id="income" type="text" class="form-control" name="income"  pattern="^(([1-9]\d*)|0)(.\d+)?$" oninvalid="this.setCustomValidity('Целое или дробное число (разделитель точка)')" oninput="setCustomValidity('')">
     </div>
-</div>
-{% endfor %}
-</div> #}
+    <div class="col-4">
+        <label class="form-label">email</label>
+        
+        <input id="email" type="email" class="form-control" name="email" required>
+    </div>
+    <div class="col-4">
+        <label class="form-label">Категория</label>
+        <select class="form-control" name="category">
+            {% for category in categories %}
+            <option value="{{category.text}}">{{category.text}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Документы</label>
+        
+        <input id="documents" multiple="multiple" class="form-control" type="file" name="documents[]" accept=".pdf" required>
+      </div>
+    <div class="col-12 text-end">
+        <button id="btn" type="submit" class="btn btn-primary">Добавить</button>
+    </div>
+</form>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script type="text/javascript">
+    // правильный разделитель в mariaDB ТОЧКА
+    $('.number input').on('input change paste', function() {
+        $(this).val(this.value.replace(/[^0-9\.]/, '')); // запрещаем ввод любых символов, кроме цифр и точки      
+        // /[^(([1-9]\d*)|0)(.\d+)?$]/
+    });
+    // const button=document.querySelector('#btn')
+    // const income=document.querySelector('#income')
+    // const email=document.querySelector('#email')
+    // $('form').submit(function(event){
+    //     if(2===2){
+        
+    //     }
+    //     else{
+    //         event.preventDefault();
+    //     //alert('Валидация не пройдена!');
+    //     // income.style.border='1px solid red'
+    //     }
+    // });
+    // email.addEventListener('blur',(e)=>{
+   
+    // //     if(email.value===''&& checkPlea===true){
+    // //     // incorrectField('Укажите мольбу',2,textFieldPlea,'erPlea')
+    // //     // checkPlea=false
+    // // }
+    // })
+    // //соответствие регулярке и не пустое
+    // function checkField(node,regular){
+    //     var result = false
+    //     // if(!isFieldEmpty(node)){
+        
+    //     // }
+    //     return result
+    // }
+    // function isFieldEmpty(node){
+    //     var result = false
+    //     if(node.value===''){
+    //         result = true
+    //     }
+    //     return result
+    // }
+</script>
+
+{% else %}
+<div><p>worker</p></div>
+{% endif %}
 
 {% endblock %}

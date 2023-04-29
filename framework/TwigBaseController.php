@@ -1,5 +1,5 @@
 <?php
-require_once "BaseController.php"; // обязательно импортим BaseController
+require_once "BaseController.php"; // импортим BaseController
 
 class TwigBaseController extends BaseController {
     public $title = ""; // название страницы
@@ -19,7 +19,13 @@ class TwigBaseController extends BaseController {
     {
         $context = parent::getContext(); // вызываем родительский метод
         $context['title'] = $this->title;// добавляем title в контекст
-        $context['is_logged'] = $_SESSION['is_logged']; 
+        
+        if (isset($_SESSION['is_logged'])) {  
+            $context['is_logged'] = $_SESSION['is_logged'];
+        }else {
+            $_SESSION['is_logged'] = false;
+            $context['is_logged'] = $_SESSION['is_logged'];
+        }
       //  $context['menu'] = $this->menu;
         return $context;
     }
