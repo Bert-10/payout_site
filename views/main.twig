@@ -1,63 +1,38 @@
 {% extends "__layout.twig" %}
-{# {% block menu %}
-dhdhgh
-{% endblock %} #}
 {% block content %}
-{# <div style="display: flex;justify-content: space-between; margin: 20px;"> #}
 <head>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css"
     integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
 </head>
-{% if message %}
-<div class="alert alert-info">
-    {{message}}
-</div>
-{% endif %}
-{% if user == "student" %}
-<style type="text/css">
-    /* input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-    appearance: none;
-} */
-/* :-moz-submit-invalid {
-    border: 1px solid red;
-} */
+<style>
+    .long_text{    
+        white-space: nowrap; /* Запрещаем перенос строк */
+        overflow: hidden; /* Обрезаем все, что не помещается в область */
+        text-overflow: ellipsis; /* Добавляем многоточие в конце */
+    }
 </style>
-    {# [hint] {
-        position: relative; /* Относительное позиционирование */ 
-       }
-       [hint]::after {
-        content: attr(hint); /* Выводим текст */
-        position: absolute; /* Абсолютное позиционирование */
-        width: 300px; /* Ширина подсказки */
-        left: 0; top: 0; /* Положение подсказки */
-        background: #3989c9; /* Синий цвет фона */
-        color: #fff; /* Цвет текста */
-        padding: 0.5em; /* Поля вокруг текста */
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Параметры тени */
-        pointer-events: none; /* Подсказка */
-        opacity: 0; /* Подсказка невидима */
-        transition: 1s; /* Время появления подсказки */
-       } 
-       [hint]:hover::after {
-        opacity: 1; /* Показываем подсказку */
-        top: 2em; /* Положение подсказки */
-       } #}
-{# hint="в рублях, может быть дробным числом, разделитель точка" #}
-{# oninvalid="this.setCustomValidity('Целое или дробное число, разделитель точка')" #}
-<form action="" enctype="multipart/form-data" method="POST" class="row g-3">
-    <div class="col-4 number">
-        <label class="form-label">Среднедушевой доход семьи (в рублях)</label>
-        <input id="income" type="text" class="form-control" name="income"  pattern="^(([1-9]\d*)|0)(.\d+)?$" oninvalid="this.setCustomValidity('Целое или дробное число (разделитель точка)')" oninput="setCustomValidity('')">
+{# если есть сообщение, то выводим его #}
+{% if message %} 
+    <div class="alert alert-info">
+        {{message}}
     </div>
+{% endif %}
+{# разметка для студента #}
+{% if user == "student" %} 
+    {# oninvalid="this.setCustomValidity('Целое или дробное число, разделитель точка')" #}
+    <form action="" enctype="multipart/form-data" method="POST" class="row g-3">
+        <div class="col-4 number">
+            <label  label class="form-label">Среднедушевой доход семьи (в рублях)</label>
+            <input id="income" type="text" class="form-control" name="income"  pattern="^(([1-9]\d*)|0)(.\d+)?$" oninvalid="this.setCustomValidity('Целое или дробное число (разделитель точка)')" oninput="setCustomValidity('')">
+        </div>
     <div class="col-4">
-        <label class="form-label">email</label>
+        <label class="form-label">Электронная почта</label>
         
-        <input id="email" type="email" class="form-control" name="email" required>
+        <input id="email" type="email" class="form-control" name="email" required placeholder="email@example.com">
     </div>
     <div class="col-4">
         <label class="form-label">Категория</label>
-        <select class="form-control" name="category">
+        <select class="form-control long_text" name="category" style="appearance:auto;">
             {% for category in categories %}
             <option value="{{category.text}}">{{category.text}}</option>
             {% endfor %}
@@ -65,11 +40,10 @@ dhdhgh
     </div>
     <div class="mb-3">
         <label class="form-label">Документы</label>
-        
         <input id="documents" multiple="multiple" class="form-control" type="file" name="documents[]" accept=".pdf" required>
-      </div>
+    </div>
     <div class="col-12 text-end">
-        <button id="btn" type="submit" class="btn btn-primary">Добавить</button>
+        <button id="btn" type="submit" class="btn btn-primary">Отправить заявку</button>
     </div>
 </form>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
@@ -115,9 +89,150 @@ dhdhgh
     //     return result
     // }
 </script>
-
+{# разметка для сотрудника деканата #}
 {% else %}
-<div><p>worker</p></div>
+<style>
+    .hidden{
+        display: none;
+    }
+    .visible{
+        display: block;
+    }
+    p{
+        margin-bottom: 0px;
+    }
+
+    .list__item__hat{
+        margin-top: 0.5em;
+        border: 2px solid rgb(0, 0, 0);
+        background: rgba(165, 165, 165, 0.3) none repeat scroll 0% 0%;
+        margin-bottom: 0.5em;
+        padding: 0.3em;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    .list__item__info{
+        /* margin-top: 0.5em; */
+        
+        border: 3px solid rgb(161, 66, 90);
+        padding: 0.3em;
+        border-radius: 10px;
+    }
+    .btn_a{
+        color: #0f6fc5;
+        padding-top: 0px;
+        padding-bottom: 0px;
+    }
+    .btn_a:hover{
+        text-decoration: underline;
+        color: #0d5899;
+    }
+
+</style>
+    {% if requests %}
+    <div class="list">
+        {% for request in requests %}
+            <div class="list__item">
+                <div class="list__item__hat">
+                    <p>{{request.FIO}}</p>
+                    {# {{request.id}} #}
+                </div>
+                <div class="hidden list__item__info">
+                    <p>Категория: {{request.text}}</p>
+                    <p>Группа: {{request.сipher}}</p>
+                    <p>Доход: {{request.income}}р.</p>
+                    <p>Документы:</p>
+                    {% for document in request.documents %}
+                    {# <a href="/document/{{document}}" target="_blank">Документ</a> #}
+                    <form action="/documents" target="_blank" method="POST">
+                        <input type="hidden" name="document" value="{{document}}">
+                        <button type="submit" class="btn btn_a">
+                            <p>{{document}}</p>
+                        </button>
+                    </form>
+                    {% endfor %}
+                    <form action="" method="POST"  class="row g-2 validation_form">
+                        <div class="col-3">
+                            <label class="form-label">Результат проверки заявки:</label>
+                            <select class="form-control select_status" name="status" style="appearance:auto;">
+                                <option value="отклоненная">Отклонена</option>
+                                <option value="принятая">Принята</option>
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label label_disabled">Причина отказа:</label>
+                            <select class="form-control input_disabled" name="status_result" style="appearance:auto;">
+                                <option value="Некорректные документы">Некорректные документы</option>
+                                <option value="Недействительные документы">Недействительные документы</option>
+                                <option value="Документы не на имя студента">Документы на имя не этого студента</option>
+                                <option value="Поддельные документы">Поддельные документы</option>
+                            </select>
+                        </div>
+                        <input type="hidden" name="id" value="{{request.id}}">
+                        <div>
+                            <label class="form-label label_disabled">Пояснения к причине отказа (необязательно для заполнения)</label>
+                            <textarea type="text" class="form-control input_disabled" name="status_result-extended" placeholder=""></textarea>
+                        </div>
+                        <div class="" >
+                            <button type="submit" class="btn btn-primary">Сохранить результат проверки</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">Нет необработанных заявок</div>
+    {% endif %}
+
+<script type="text/javascript">
+
+    const list=document.querySelector('.list')
+    var oneElementVisible = false;
+    document.querySelectorAll("div.list div.list__item").forEach((item) => {
+        var hat = item.querySelector("div.list__item__hat")
+        hat.addEventListener('click', (e) => {
+            var el = item.querySelector("div.hidden");
+            if(oneElementVisible){
+                var e = list.querySelector("div.list__item div.visible")
+                e.classList.replace("visible", "hidden");
+            }
+            if(el === null){
+                oneElementVisible=false;
+            }else{
+                el.classList.replace("hidden", "visible");
+                oneElementVisible=true;
+            }
+        })
+    });
+
+    document.querySelectorAll(".validation_form").forEach((item) => {
+        var select_status = item.querySelector(".select_status")
+        var label_disabled = item.querySelectorAll(".label_disabled")
+        var input_disabled = item.querySelectorAll(".input_disabled")
+        select_status.addEventListener('change', (e) => {
+            if(select_status.value==="принятая") {
+                label_disabled.forEach((label) => {
+                    label.style.opacity = 0.5;
+                })
+                input_disabled.forEach((input) => {
+                    input.style.opacity = 0.5;
+                    input.disabled = true;
+                })
+            } else{
+                label_disabled.forEach((label) => {
+                    label.style.opacity = 1;
+                })
+                input_disabled.forEach((input) => {
+                    input.style.opacity = 1;
+                    input.disabled = false;
+                })
+            }
+            // alert('dg');
+        })
+    });
+
+</script>
 {% endif %}
 
 {% endblock %}

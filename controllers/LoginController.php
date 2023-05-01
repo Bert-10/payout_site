@@ -22,15 +22,10 @@ EOL;
             $_SESSION['is_logged'] = false;
         }
         if (!isset($context['user'][0])) {
-       // if ($context['user'][0][1] == "") {
-          //  header('WWW-Authenticate: Basic realm="Web objects"');
          //   http_response_code(401); // ну и статус 401 -- Unauthorized, то есть неавторизован
-         //   echo "не залогинен";
             $_SESSION['is_logged'] = false;
             $_SESSION['user']="no";
             header("Location: /login");
-
-          //  exit; // прерываем выполнение скрипта
         }else{            
             $_SESSION['is_logged'] = true;
             

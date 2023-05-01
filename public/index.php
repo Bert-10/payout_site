@@ -6,6 +6,7 @@ require_once "../controllers/MainController.php";
 require_once "../controllers/Controller404.php";
 require_once "../controllers/LoginController.php";
 require_once "../controllers/LogoutController.php";
+require_once "../controllers/DocumentController.php";
 
 $loader = new \Twig\Loader\FilesystemLoader('../views');
 $twig = new \Twig\Environment($loader, [
@@ -15,8 +16,6 @@ $twig->addExtension(new \Twig\Extension\DebugExtension());
 
 session_set_cookie_params(60*60*10);
 session_start();
-
-// $pdo = new PDO("mysql:host=localhost;dbname=j46017042_webbd;charset=utf8;port=3307", "j46017042", "f352:_+xd~ZF");
 
 $pdo = new PDO("mysql:host=localhost;dbname=payout_db;charset=utf8;port=3307", "root", "");
 
@@ -28,6 +27,7 @@ $router = new Router($twig, $pdo);
 $router->add("/", MainController::class)->middleware(new LoginRequiredMiddleware());
 $router->add("/login", LoginController::class);
 $router->add("/logout", LogoutController::class);
+$router->add("/documents", DocumentController::class)->middleware(new LoginRequiredMiddleware());
 $router->get_or_default(Controller404::class);
 
 
