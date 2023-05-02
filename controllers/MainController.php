@@ -1,5 +1,14 @@
 <?php
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 require_once "../framework/TwigBaseController.php";
+require_once "../libraries/PHPExcel/PHPExcel.php";
+
+require '../libraries/phpmailer/Exception.php';
+require '../libraries/phpmailer/PHPMailer.php';
+require '../libraries/phpmailer/SMTP.php';
 
 class MainController extends TwigBaseController {
     public $template = "main.twig";
@@ -22,11 +31,7 @@ EOL;
             $context['requests'] = $this->getUnverifiedRequests();
             $context['user'] = "worker";
             //---
-            $email = "tiken.bubu@mail.ru"; // от кого
-            $to = "misha.rogrant@mail.ru"; // кому
-            $subject = "Вам письмо"; // тема письма
-            $msg = "Спасибо за заполнение формы.\n";
-            mail($to, $subject, $msg, 'From: ' . $email);
+            // $this->sendEamail();
             //---
         }
         return $context;
@@ -49,12 +54,181 @@ EOL;
             }
 
         } else{ //пост запрос для сотрудника деканата
-            $this->updateRequest();
-            header("Location: /");
-            exit;
+            if(isset($_POST['form_id'])){
+                if($_POST['form_id']==1){
+                //echo 'win';
+                    // $sum = $_POST['sum'];
+                    // $message='';
+                    // if(!is_numeric($sum)) { //доход
+                    //     $context['message'] = 'Введенная сумма не корректна!';
+                    // } else{
+                    //     $this->determineRequestsForPayouts();
+                    // }
+                    $this->saveDataInExcelFile();
+                }
+            } else{
+                $this->updateRequest();
+                $this->sendEmailToVerifiedStudent();
+                header("Location: /");
+                exit;
+            }
         }
         $this->get($context);
 
+    }
+
+    public function saveDataInExcelFile(){
+        // $array
+        // $objExcel = new PHPExcel();
+        // $objExcel->setActiveSheetIndex[0];
+        // $objWriter = PHPExcel_IOFactory::createWriter($objExcel,'Excel5');
+        // $objWriter->save('payouts.xls');
+        $myXls = new PHPExcel();
+// Указание на активный лист
+        $myXls->setActiveSheetIndex(0);
+// Получение активного листа
+        $mySheet = $myXls->getActiveSheet();
+// Указание названия листа книги
+        $mySheet->setTitle("Новый лист");
+
+// Указываем значения для отдельных ячеек
+        $mySheet->setCellValue("A1", "1-я строка");
+        $mySheet->setCellValue("A2", "2-я строка");
+        $mySheet->setCellValue("A3", "3-я строка");
+        $mySheet->setCellValue("B1", "2-й столбец");
+        $objWriter = new PHPExcel_Writer_Excel5($myXls,'Excel5');
+        $objWriter->save("test.xls");
+    }
+
+
+    public function sendEmailToVerifiedStudent(){
+        $sql = <<<EOL
+SELECT s.FIO,r.status,r.email,r.status_result FROM request as r
+JOIN studentrequest as sr ON(r.id = sr.request_id)
+JOIN student as s ON(sr.student_id=s.number_record)
+WHERE r.id =:id
+EOL;
+        $query=$this->pdo->prepare($sql);
+        $query->bindValue("id", $_POST['id']);
+        $query->execute();
+        $resultSql = $query->fetchAll();
+        $title="Результат проверки заявки";
+        if($resultSql[0]['status']=='принятая'){
+            $body = explode(' ', $resultSql[0]['FIO'])[1] . ", добрый день!" . " Ваша заявка была рассмотрена.<br>Текущий статус заявки: " . $resultSql[0]['status'];
+        } else{
+            $body = explode(' ', $resultSql[0]['FIO'])[1] . ", добрый день!" . " Ваша заявка была рассмотрена.<br>Текущий статус заявки: " . $resultSql[0]['status'] . ". Причина: " . $resultSql[0]['status_result'];
+        }
+        $this->sendEamail($resultSql[0]['email'],$body,$title);
+    }
+
+    public function determineRequestsForPayouts(){  //определяем кто из студентов получит выплаты
+        $minPayout=2000;
+        $sum = $_POST['sum'];
+        $query = $this->pdo->query("SELECT r.id,r.email,r.status_result,r.status, s.FIO, g.сipher,c.priority FROM request as r
+JOIN category as c ON(r.category=c.id)
+JOIN studentrequest as sr ON(r.id = sr.request_id)
+JOIN student as s ON(sr.student_id=s.number_record)
+JOIN payout_db.group as g ON(g.id=s.group_id)
+WHERE status = 'принятая' AND status_result IS NULL
+group by c.priority, r.income");
+        $resultSql = $query->fetchAll();
+
+        if((count($resultSql)*$minPayout)<=$sum){
+            $payoutSum = ((float)$sum)/count($resultSql);
+            foreach($resultSql as &$request){
+                // $this->saveDataInExcelFile();
+                $request['status'] = "принятая";
+                $request['status_result'] = $payoutSum;
+            }
+
+        } else {
+            $count =  intdiv($sum,$minPayout);
+            foreach($resultSql as $key => &$request){
+                if($key<$count){
+                    $request['status'] = "принятая";
+                    $request['status_result'] = $minPayout;
+                } else{
+                    $request['status'] = "отклоненная";
+                    $request['status_result'] = "Нехватка денежных средств";
+                }
+            }
+
+        }
+        $this->savePayoutData($sum, $resultSql);
+        $title="Результат формирования выплат";
+
+        foreach($resultSql as &$request){
+            if($request['status'] == "принятая"){
+                $body = explode(' ', $request['FIO'])[1] . ", добрый день!" . " Информируем вас о результатах формирования выплат.<br>Вам назначена выплата в размере: " . $request['status_result']. "р.";
+            }else{
+                $body = explode(' ', $request['FIO'])[1] . ", добрый день!" . " Информируем вас о результатах формирования выплат.<br>Вам отказано в выплате, причина: " . $request['status_result'];
+            }
+            $this->sendEamail($request['email'],$body,$title);
+        }
+    }
+
+    public function savePayoutData($sum, $array){ //сохраняем данные о новой выплате и обновляем заявки
+        $sql = <<<EOL
+INSERT INTO payout(sum, date)
+VALUES(:sum, :date)
+EOL;
+        $query = $this->pdo->prepare($sql);
+        $query->bindValue("sum", $sum);
+        $query->bindValue("date", date("Y-m-d H:i:s", strtotime("+8 hours")));
+        $query->execute();
+        $payout_id = $this->pdo->lastInsertId();
+
+        // а вот тут сохраняй все заявки. в $array передавай все заявки, даже отклоненные
+        foreach($array as $key => $request){
+            $sql = <<<EOL
+INSERT INTO specificpayout(payout_id, request_id)
+VALUES(:payout_id, :request_id)
+EOL;
+            $query = $this->pdo->prepare($sql);
+            $query->bindValue("payout_id", $payout_id);
+            $query->bindValue("request_id", $request['id']);
+            $query->execute();
+            $sql = <<<EOL
+UPDATE request SET status = :status, status_result = :status_result WHERE id = :id
+EOL;
+            $query = $this->pdo->prepare($sql);
+            $query->bindValue("status", $request['status']);
+            $query->bindValue("status_result", $request['status_result']);
+            $query->bindValue("id", $request['id']);
+            $query->execute();
+        }
+
+    }
+
+    public function sendEamail($email,$body,$title){
+        $mail = new PHPMailer(true);
+        
+        try {
+            //Server settings
+            // $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
+            $mail->CharSet = 'utf-8';
+            $mail->isSMTP();                                            //Send using SMTP
+            $mail->Host       = 'smtp.mail.ru';                     //Set the SMTP server to send through
+            $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+            $mail->Username   = 'irnitu.payout@mail.ru';                     //SMTP username
+            $mail->Password   = '5hdUpTuz5DrGvQ7zcAgi';                               //SMTP password
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+            $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+
+            //Recipients
+            $mail->setFrom('irnitu.payout@mail.ru');
+            $mail->addAddress($email);     //Add a recipient
+            //Content
+            $mail->isHTML(true);                                  //Set email format to HTML
+            $mail->Subject = $title;
+            $mail->Body = $body;
+            // $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+
+            $mail->send();
+            // echo 'Message has been sent';
+        } catch (Exception $e) {
+            // echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        }
     }
 
     public function updateRequest(){
@@ -145,8 +319,8 @@ EOL;
         $query->bindValue("student_id", $_SESSION['id']);
         $query->execute();
 
-        $documents = $this->uploadFile();
-        foreach ($documents as $key => $document){
+        $documents = $this->uploadFile(); //переименовываю файлы
+        foreach ($documents as $key => $document){//сохраняем данные о документах в бд
             $sql = <<<EOL
 INSERT INTO document(name) VALUES(:name)
 EOL;
@@ -198,7 +372,7 @@ EOL;
         $sql = <<<EOL
 SELECT * FROM request
 WHERE id = (SELECT request_id FROM studentrequest
-WHERE student_id=:id)  AND (status = 'непроверенная' OR (status = 'принята' AND status_result IS NULL))
+WHERE student_id=:id)  AND (status = 'непроверенная' OR (status = 'принятая' AND status_result IS NULL))
 EOL;
         $query=$this->pdo->prepare($sql);
         $query->bindValue("id", $_SESSION['id']);

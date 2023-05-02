@@ -23,12 +23,12 @@
     <form action="" enctype="multipart/form-data" method="POST" class="row g-3">
         <div class="col-4 number">
             <label  label class="form-label">Среднедушевой доход семьи (в рублях)</label>
-            <input id="income" type="text" class="form-control" name="income"  pattern="^(([1-9]\d*)|0)(.\d+)?$" oninvalid="this.setCustomValidity('Целое или дробное число (разделитель точка)')" oninput="setCustomValidity('')">
+            <input id="income" type="text" class="form-control" maxlength="10" name="income"  pattern="^(([1-9]\d*)|0)(.\d+)?$" oninvalid="this.setCustomValidity('Целое или дробное число (разделитель точка)')" oninput="setCustomValidity('')">
         </div>
     <div class="col-4">
         <label class="form-label">Электронная почта</label>
         
-        <input id="email" type="email" class="form-control" name="email" required placeholder="email@example.com">
+        <input id="email" type="email" class="form-control" maxlength="40" name="email" required placeholder="email@example.com">
     </div>
     <div class="col-4">
         <label class="form-label">Категория</label>
@@ -171,7 +171,7 @@
                         <input type="hidden" name="id" value="{{request.id}}">
                         <div>
                             <label class="form-label label_disabled">Пояснения к причине отказа (необязательно для заполнения)</label>
-                            <textarea type="text" class="form-control input_disabled" name="status_result-extended" placeholder=""></textarea>
+                            <textarea type="text" class="form-control input_disabled" name="status_result-extended" maxlength="450" placeholder=""></textarea>
                         </div>
                         <div class="" >
                             <button type="submit" class="btn btn-primary">Сохранить результат проверки</button>
