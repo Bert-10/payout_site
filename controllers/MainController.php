@@ -4,11 +4,15 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require_once "../framework/TwigBaseController.php";
-require_once "../libraries/PHPExcel/PHPExcel.php";
+require_once "../vendor/autoload.php";
+require_once '../libraries/phpmailer/Exception.php';
+require_once '../libraries/phpmailer/PHPMailer.php';
+require_once '../libraries/phpmailer/SMTP.php';
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-require '../libraries/phpmailer/Exception.php';
-require '../libraries/phpmailer/PHPMailer.php';
-require '../libraries/phpmailer/SMTP.php';
 
 class MainController extends TwigBaseController {
     public $template = "main.twig";
@@ -56,15 +60,14 @@ EOL;
         } else{ //пост запрос для сотрудника деканата
             if(isset($_POST['form_id'])){
                 if($_POST['form_id']==1){
-                //echo 'win';
-                    // $sum = $_POST['sum'];
-                    // $message='';
-                    // if(!is_numeric($sum)) { //доход
-                    //     $context['message'] = 'Введенная сумма не корректна!';
-                    // } else{
-                    //     $this->determineRequestsForPayouts();
-                    // }
-                    $this->saveDataInExcelFile();
+                    $sum = $_POST['sum'];
+                    $message='';
+                    if(!is_numeric($sum)) { //доход
+                        $context['message'] = 'Введенная сумма не корректна!';
+                    } else{
+                        $this->determineRequestsForPayouts();
+                    }
+                    
                 }
             } else{
                 $this->updateRequest();
@@ -77,27 +80,70 @@ EOL;
 
     }
 
-    public function saveDataInExcelFile(){
-        // $array
-        // $objExcel = new PHPExcel();
-        // $objExcel->setActiveSheetIndex[0];
-        // $objWriter = PHPExcel_IOFactory::createWriter($objExcel,'Excel5');
-        // $objWriter->save('payouts.xls');
-        $myXls = new PHPExcel();
-// Указание на активный лист
-        $myXls->setActiveSheetIndex(0);
-// Получение активного листа
-        $mySheet = $myXls->getActiveSheet();
-// Указание названия листа книги
-        $mySheet->setTitle("Новый лист");
+    public function saveDataInExcelFile($array){
+        //make a new spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getActiveSheet()
+                    ->getColumnDimension('A')
+                    ->setAutoSize(true);
+        $spreadsheet->getActiveSheet()
+                    ->getColumnDimension('B')
+                    ->setAutoSize(true);
+        $spreadsheet->getActiveSheet()
+                    ->getColumnDimension('D')
+                    ->setAutoSize(true);
+        $spreadsheet->getActiveSheet()
+                    ->getColumnDimension('E')
+                    ->setAutoSize(true);
 
-// Указываем значения для отдельных ячеек
-        $mySheet->setCellValue("A1", "1-я строка");
-        $mySheet->setCellValue("A2", "2-я строка");
-        $mySheet->setCellValue("A3", "3-я строка");
-        $mySheet->setCellValue("B1", "2-й столбец");
-        $objWriter = new PHPExcel_Writer_Excel5($myXls,'Excel5');
-        $objWriter->save("test.xls");
+        $dateTimeNow = date("Y-m-d H:i:s", strtotime("+8 hours"));
+        $spreadsheet->getActiveSheet()
+                    ->setCellValue('A1',"Группа")
+                    ->setCellValue('B1',"ФИО")
+                    ->setCellValue('C1',"РНВ")  //результат назначения выплат
+                    ->setCellValue('D1',"Размер выплаты (р)")
+                    ->setCellValue('E1',"Дата формирования файла")
+                    ->setCellValue('E2',Date::PHPToExcel($dateTimeNow));
+
+        //set the cell format into a date
+        $spreadsheet->getActiveSheet()
+			        ->getStyle('E2')
+			        ->getNumberFormat()
+			        ->setFormatCode(NumberFormat::FORMAT_DATE_DATETIME);
+        foreach($array as $key => $value){
+            $spreadsheet->getActiveSheet()
+                        ->setCellValue('A'.($key+2),$value['сipher'])
+                        ->setCellValue('B'.($key+2),$value['FIO']);
+            if($value['status']=="принятая"){
+                $spreadsheet->getActiveSheet()
+                            ->setCellValue('C'.($key+2),"+")
+                            ->setCellValue('D'.($key+2),$value['status_result']);
+            } else{
+                $spreadsheet->getActiveSheet()
+                            ->setCellValue('C'.($key+2),"-");
+            }
+        }
+        //set the header first, so the result will be treated as an xlsx file.
+        // header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Type: application/vnd.ms-excel');
+
+        //make it an attachment so we can define filename
+        header('Content-Disposition: attachment;filename="result.xlsx"');
+
+        //create IOFactory object
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        //save into php output
+        $writer->save('php://output');
+        // if (function_exists("mb_internal_encoding"))
+        // {
+        //     $oldEncoding = mb_internal_encoding();
+        //     mb_internal_encoding('UTF-8');
+        //     $writer->save('php://output');
+        //     mb_internal_encoding($oldEncoding);
+        // } else{
+        //     // $writer->save('php://output');
+        // }
+
     }
 
 
@@ -154,6 +200,7 @@ group by c.priority, r.income");
             }
 
         }
+        $this->saveDataInExcelFile($resultSql);
         $this->savePayoutData($sum, $resultSql);
         $title="Результат формирования выплат";
 
@@ -211,7 +258,7 @@ EOL;
             $mail->Host       = 'smtp.mail.ru';                     //Set the SMTP server to send through
             $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
             $mail->Username   = 'irnitu.payout@mail.ru';                     //SMTP username
-            $mail->Password   = '5hdUpTuz5DrGvQ7zcAgi';                               //SMTP password
+            $mail->Password   = '';                               //SMTP password
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
             $mail->Port       = 465;                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
 
